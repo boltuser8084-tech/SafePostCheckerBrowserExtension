@@ -99,7 +99,7 @@ SafePost Checker is designed with privacy as the top priority:
 
 For support, feature requests, or bug reports:
 - Email: mayankrajpis2013@gmail.com
-- GitHub: [Repository Link]
+- GitHub: https://github.com/boltuser8084-tech/SafePostCheckerBrowserExtension
 - Website: https://digital-footprint-awareness.vercel.app/
 
 ## License
