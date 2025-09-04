@@ -123,6 +123,10 @@ class SafePostPopup {
       this.runPrivacyCheckup();
     });
 
+    document.getElementById('openDashboard')?.addEventListener('click', () => {
+      this.openInstitutionalDashboard();
+    });
+
     // About section handlers
     document.getElementById('privacyPolicy')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -212,6 +216,12 @@ class SafePostPopup {
   runPrivacyCheckup() {
     // Create a simple privacy checkup overlay
     this.showNotification('Privacy checkup feature coming soon!', 'info');
+  }
+
+  openInstitutionalDashboard() {
+    chrome.tabs.create({ 
+      url: chrome.runtime.getURL('dashboard/login.html')
+    });
   }
 
   openPrivacyPolicy() {

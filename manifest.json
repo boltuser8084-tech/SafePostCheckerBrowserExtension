@@ -43,7 +43,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["src/alert.html", "src/alert.css", "src/alert.js"],
+      "resources": ["src/alert.html", "src/alert.css", "src/alert.js", "dashboard/*"],
       "matches": ["<all_urls>"]
     }
   ]

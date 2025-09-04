@@ -75,14 +75,24 @@ class SafePostDetector {
     
     textInputs.forEach(input => {
       input.addEventListener('input', this.debounce((event) => {
-        this.analyzeText(event.target.value, event.target);
+        const text = event.target.value || event.target.textContent || event.target.innerText;
+        this.analyzeText(text, event.target);
       }, 300));
 
       input.addEventListener('paste', (event) => {
         setTimeout(() => {
-          this.analyzeText(event.target.value, event.target);
+          const text = event.target.value || event.target.textContent || event.target.innerText;
+          this.analyzeText(text, event.target);
         }, 100);
       });
+
+      // Additional event for contenteditable elements
+      if (input.contentEditable === 'true') {
+        input.addEventListener('keyup', this.debounce((event) => {
+          const text = event.target.textContent || event.target.innerText;
+          this.analyzeText(text, event.target);
+        }, 300));
+      }
     });
 
     // Monitor dynamically added inputs
@@ -103,6 +113,52 @@ class SafePostDetector {
         });
       });
     });
+
+    // Enhanced Instagram monitoring with mutation observer
+    this.setupInstagramMonitoring();
+  }
+
+  setupInstagramMonitoring() {
+    // Instagram-specific monitoring for dynamic content
+    const instagramObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // Check for Instagram-specific elements
+            const instagramInputs = node.querySelectorAll ? 
+              node.querySelectorAll(`
+                [contenteditable="true"][aria-label*="Add a comment"],
+                [contenteditable="true"][aria-label*="Write a caption"],
+                [contenteditable="true"][data-testid="caption-input"],
+                div[contenteditable="true"][role="textbox"],
+                textarea[aria-label*="Add a comment"]
+              `) : [];
+            
+            instagramInputs.forEach(input => {
+              input.addEventListener('input', this.debounce((event) => {
+                const text = event.target.textContent || event.target.value || event.target.innerText;
+                this.analyzeSocialMediaPost(text, event.target);
+              }, 300));
+
+              input.addEventListener('keyup', this.debounce((event) => {
+                const text = event.target.textContent || event.target.value || event.target.innerText;
+                this.analyzeSocialMediaPost(text, event.target);
+              }, 300));
+            });
+          }
+        });
+      });
+    });
+
+    // Start observing Instagram for dynamic content
+    if (window.location.hostname.includes('instagram.com')) {
+      instagramObserver.observe(document.body, { 
+        childList: true, 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['contenteditable', 'aria-label']
+      });
+    }
 
     observer.observe(document.body, { childList: true, subtree: true });
   }
@@ -164,10 +220,16 @@ class SafePostDetector {
     // Common social media post selectors
     const postSelectors = [
       '[data-testid="tweetTextarea_0"]', // Twitter/X
-      '[contenteditable="true"][role="textbox"]', // Facebook
+      '[contenteditable="true"][role="textbox"]', // Facebook/Instagram
       'textarea[placeholder*="What\'s on your mind"]', // Facebook
-      '[contenteditable="true"][data-text="Write a comment..."]', // Instagram
-      '.notranslate[contenteditable="true"]' // Various platforms
+      '[contenteditable="true"][data-text="Write a comment..."]', // Instagram comments
+      '[contenteditable="true"][aria-label*="Add a comment"]', // Instagram comments
+      '[contenteditable="true"][aria-label*="Write a caption"]', // Instagram posts
+      '[contenteditable="true"][data-testid="caption-input"]', // Instagram stories
+      '.notranslate[contenteditable="true"]', // Various platforms
+      'div[contenteditable="true"][role="textbox"]', // Instagram DMs
+      'textarea[aria-label*="Add a comment"]', // Instagram fallback
+      'div[data-testid="media-upload-caption"]' // Instagram upload caption
     ];
 
     postSelectors.forEach(selector => {
@@ -198,6 +260,11 @@ class SafePostDetector {
 
   analyzeSocialMediaPost(text, element) {
     if (!text || text.length < 10) return;
+
+    // Enhanced Instagram detection
+    if (window.location.hostname.includes('instagram.com')) {
+      console.log('SafePost: Analyzing Instagram content:', text.substring(0, 50) + '...');
+    }
 
     const detections = this.detectSensitiveData(text);
     const oversharing = this.detectOversharing(text);
@@ -254,7 +321,10 @@ class SafePostDetector {
       /\b(?:my phone number|call me at|text me at)\b/gi,
       /\b(?:my birthday is|born on|i was born)\b/gi,
       /\b(?:my bank|account number|routing number)\b/gi,
-      /\b(?:feeling depressed|having anxiety|mental health)\b/gi
+      /\b(?:feeling depressed|having anxiety|mental health)\b/gi,
+      /\b(?:home alone|parents away|nobody home)\b/gi,
+      /\b(?:going on vacation|leaving town|house empty)\b/gi,
+      /\b(?:my salary|how much i make|my income)\b/gi
     ];
 
     const detections = [];
@@ -330,6 +400,9 @@ class SafePostDetector {
     // Remove any existing alerts
     const existingAlert = document.getElementById('safepost-alert');
     if (existingAlert) existingAlert.remove();
+
+    // Log for debugging
+    console.log('SafePost: Creating alert for:', alertData.type);
 
     const alertContainer = document.createElement('div');
     alertContainer.id = 'safepost-alert';
